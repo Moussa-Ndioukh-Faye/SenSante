@@ -4,10 +4,12 @@
 __pycache__/
 *.pyc
 venv/
+.venv/
 .env/
+.sixth/
 
 # Modele ML (trop gros pour Github)
-model/*.pkl
+models/*.pkl
 
 # Fichiers OS
 .DS_Store
