@@ -46,7 +46,7 @@ temp_by_diag = df.groupby('diagnostic')['temperature'].mean()
 for diag, temp in temp_by_diag.items():
     print(f"  {diag:12s} : {temp:.1f} °C")
 
-print("\n{'=' * 50}")
+print(f"\n{'=' * 50}")
 print("FIN DE L'EXPLORATION") 
 print("Prochaine lab : Entrainer un modèle ML")
 print(f"{'=' * 50}")
