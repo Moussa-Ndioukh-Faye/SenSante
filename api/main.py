@@ -6,6 +6,68 @@ from pydantic import BaseModel, Field
 import joblib 
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+from groq import Groq
+
+# Charger les variables d'environnement
+load_dotenv()
+
+# Client Groq (chargé au démarrage)
+groq_client = None
+groq_api_key = os.getenv("GROQ_API_KEY")
+
+if groq_api_key:
+    groq_client = Groq(api_key=groq_api_key)
+    print("Client Groq initialisé.")
+else:
+    print(
+        "ATTENTION : GROQ_API_KEY non trouvée. "
+        "/explain sera désactivé."
+    )
+
+class ExplainInput(BaseModel):
+    diagnostic: str = Field(
+        ...,
+        description="Diagnostic prédit par le modèle"
+    )
+
+    probabilite: float = Field(
+        ...,
+        description="Probabilité du diagnostic"
+    )
+
+    age: int = Field(
+        ...,
+        description="Âge du patient"
+    )
+
+    sexe: str = Field(
+        ...,
+        description="Sexe du patient"
+    )
+
+    temperature: float = Field(
+        ...,
+        description="Température du patient"
+    )
+
+    region: str = Field(
+        ...,
+        description="Région du patient"
+    )
+
+
+class ExplainOutput(BaseModel):
+    explication: str = Field(
+        ...,
+        description="Explication en français"
+    )
+
+    modele_llm: str = Field(
+        default="llama-3.1-8b-instant",
+        description="Modèle LLM utilisé"
+    )
 
 # --- Schemas Pydantic ---
 class PatientInput(BaseModel):
@@ -54,6 +116,25 @@ print(f"Modèle chargé : {list(model.classes_)}")
 
 
 # --- Routes ---
+@app.get("/")
+def root():
+    return {
+        "message": "Bienvenue sur SenSante API",
+        "docs": "/docs",
+        "endpoints": {
+            "health": "/health",
+            "predict": "/predict",
+            "model-info": "/model-info",
+            "explain": "/explain"
+        }
+    }
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return {"message": "No favicon configured"}
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "SenSante API is running"}
@@ -131,3 +212,71 @@ def model_info():
         "classes": list(model.classes_),
         "nombre_features": len(feature_cols)
     }
+
+# Prompt système pour le LLM
+SYSTEM_PROMPT = """
+Tu es un médecin sénégalais. 
+RÉPOND EXCLUSIVEMENT EN MÉLANGEANT WOLOF ET FRANÇAIS (Sénégalo-français).
+C'est impératif.
+
+Expressions obligatoires :
+- Salutation : "As-salamu alaykum" ou "Nanga def"
+- Fièvre : "Sa yaram dafa tchaat"
+- Diagnostic : "Loolu mën na doon [diagnostic]"
+- Conseil : "Faw nga fadjou dji"
+- Conclusion : "Tanante"
+
+Ne fais pas de phrases trop longues.
+"""
+
+@app.post("/explain", response_model=ExplainOutput)
+def explain(data: ExplainInput):
+    """Expliquer un diagnostic en français avec un LLM."""
+
+    if not groq_client:
+        return ExplainOutput(
+            explication=(
+                "Service d'explication indisponible. "
+                "Clé API non configurée."
+            ),
+            modele_llm="aucun"
+        )
+
+    # Construire le prompt utilisateur
+    user_prompt = (
+        f"Patient : {data.sexe}, {data.age} ans, "
+        f"région {data.region}\n"
+        f"Température : {data.temperature}°C\n"
+        f"Diagnostic du modèle : {data.diagnostic} "
+        f"(probabilité {data.probabilite:.0%})\n"
+        f"Explique ce résultat au patient."
+    )
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            max_tokens=200,
+            temperature=0.3
+        )
+
+        explication = response.choices[0].message.content
+
+    except Exception as e:
+        explication = (
+            f"Erreur lors de l'appel au LLM : {str(e)}"
+        )
+
+    return ExplainOutput(
+        explication=explication,
+        modele_llm="llama-3.3-70b-versatile"
+    )

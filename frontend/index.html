@@ -2,309 +2,39 @@
 <html lang="fr">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SenSante - Pré-diagnostic</title>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- JavaScript -->
-    <script>
-
-        // URL API
-        const API_URL = "http://localhost:8000";
-
-        // Fonction principale
-        async function diagnostiquer() {
-
-            // Récupération des données
-            const patient = {
-
-                age: parseInt(
-                    document.getElementById("age").value
-                ),
-
-                sexe:
-                    document.getElementById("sexe").value,
-
-                temperature: parseFloat(
-                    document.getElementById("temperature").value
-                ),
-
-                tension_sys: parseInt(
-                    document.getElementById("tension_sys").value
-                ),
-
-                toux:
-                    document.getElementById("toux").checked,
-
-                fatigue:
-                    document.getElementById("fatigue").checked,
-
-                maux_tete:
-                    document.getElementById("maux_tete").checked,
-
-                region:
-                    document.getElementById("region").value
-            };
-
-            // Vérification
-            if (
-                isNaN(patient.age) ||
-                isNaN(patient.temperature) ||
-                isNaN(patient.tension_sys)
-            ) {
-
-                afficherErreur(
-                    "Veuillez remplir tous les champs."
-                );
-
-                return;
-            }
-
-            // Chargement
-            afficherChargement();
-
-            try {
-
-                // Requête API
-                const response = await fetch(
-                    API_URL + "/predict",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-
-                        body: JSON.stringify(patient)
-                    }
-                );
-
-                // Gestion erreur serveur
-                if (!response.ok) {
-
-                    const err =
-                        await response.json();
-
-                    throw new Error(
-                        err.detail
-                            ? JSON.stringify(err.detail)
-                            : "Erreur serveur"
-                    );
-                }
-
-                // Résultat
-                const resultat =
-                    await response.json();
-
-                afficherResultat(resultat);
-
-            } catch (error) {
-
-                afficherErreur(
-                    "Erreur de connexion : " +
-                    error.message
-                );
-            }
-        }
-
-        // Chargement
-        function afficherChargement() {
-
-            const section =
-                document.getElementById("result-section");
-
-            section.innerHTML = `
-
-                <div class="bg-white rounded-xl shadow-md p-6 text-center">
-
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4">
-                    </div>
-
-                    <p class="text-gray-500">
-                        Analyse en cours...
-                    </p>
-
-                </div>
-            `;
-        }
-
-        // Affichage résultat
-        function afficherResultat(r) {
-
-            const couleurs = {
-
-                palu: {
-                    bg: "bg-red-100",
-                    text: "text-red-800",
-                    bar: "bg-red-500",
-                    badge: "bg-red-500"
-                },
-
-                grippe: {
-                    bg: "bg-orange-100",
-                    text: "text-orange-800",
-                    bar: "bg-orange-500",
-                    badge: "bg-orange-500"
-                },
-
-                typh: {
-                    bg: "bg-yellow-100",
-                    text: "text-yellow-800",
-                    bar: "bg-yellow-500",
-                    badge: "bg-yellow-500"
-                },
-
-                sain: {
-                    bg: "bg-green-100",
-                    text: "text-green-800",
-                    bar: "bg-green-500",
-                    badge: "bg-green-500"
-                }
-            };
-
-            const c =
-                couleurs[r.diagnostic] || couleurs.sain;
-
-            const pct =
-                Math.round(r.probabilite * 100);
-
-            const section =
-                document.getElementById("result-section");
-
-            section.innerHTML = `
-
-                <div class="bg-white rounded-xl shadow-md p-6">
-
-                    <h2 class="text-xl font-bold text-gray-800 mb-4">
-                        Résultat
-                    </h2>
-
-                    <div class="${c.bg} rounded-lg p-4 mb-4">
-
-                        <p class="text-sm text-gray-600">
-                            Diagnostic :
-                        </p>
-
-                        <p class="text-2xl font-bold ${c.text} uppercase mt-1">
-                            ${r.diagnostic}
-                        </p>
-
-                    </div>
-
-                    <div class="mb-4">
-
-                        <div class="flex justify-between mb-1">
-
-                            <span class="text-sm text-gray-600">
-                                Probabilité
-                            </span>
-
-                            <span class="text-sm font-bold ${c.text}">
-                                ${pct}%
-                            </span>
-
-                        </div>
-
-                        <div class="w-full bg-gray-200 rounded-full h-3">
-
-                            <div
-                                class="${c.bar} h-3 rounded-full transition-all duration-500"
-                                style="width: ${pct}%">
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="flex items-center gap-2 mb-3">
-
-                        <span class="${c.badge} text-white text-xs px-2 py-1 rounded-full">
-                            ${r.confiance}
-                        </span>
-
-                        <span class="text-sm text-gray-600">
-                            confiance
-                        </span>
-
-                    </div>
-
-                    <div class="bg-gray-50 rounded-lg p-3">
-
-                        <p class="text-sm text-gray-700">
-                            ${r.message}
-                        </p>
-
-                    </div>
-
-                </div>
-            `;
-        }
-
-        // Erreur
-        function afficherErreur(msg) {
-
-            const section =
-                document.getElementById("result-section");
-
-            section.innerHTML = `
-
-                <div class="bg-red-50 border border-red-200 rounded-xl p-6">
-
-                    <p class="text-red-700 font-medium">
-                        ${msg}
-                    </p>
-
-                    <p class="text-red-500 text-sm mt-2">
-                        Vérifiez votre connexion et réessayez.
-                    </p>
-
-                </div>
-            `;
-        }
-
-    </script>
-
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="bg-blue-600 text-white py-4 shadow-lg">
-
-        <div class="max-w-4xl mx-auto px-4">
-
-            <h1 class="text-2xl font-bold">
-                SenSante
-            </h1>
-
+    <!-- HEADER -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="max-w-5xl mx-auto px-4 py-4">
+            <h1 class="text-3xl font-bold">SenSante</h1>
             <p class="text-blue-100 text-sm">
-                Assistant pré-diagnostic médical
+                Assistant intelligent de pré-diagnostic médical
             </p>
-
         </div>
-
     </header>
 
-    <!-- Contenu -->
-    <main class="max-w-4xl mx-auto px-4 py-8">
+    <!-- MAIN -->
+    <main class="flex-1 max-w-5xl mx-auto px-4 py-8 w-full">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <!-- Formulaire -->
-            <div id="form-section"
-                class="bg-white rounded-xl shadow-md p-6">
+            <!-- FORMULAIRE -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
 
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    Symptômes du patient
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    Informations du patient
                 </h2>
 
                 <!-- Age -->
-                <div class="mb-3">
-
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Âge
                     </label>
@@ -312,32 +42,30 @@
                     <input
                         type="number"
                         id="age"
-                        class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        placeholder="Ex: 28">
-
+                        min="0"
+                        max="120"
+                        placeholder="Ex : 28"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
                 </div>
 
                 <!-- Sexe -->
-                <div class="mb-3">
-
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Sexe
                     </label>
 
                     <select
                         id="sexe"
-                        class="w-full border border-gray-300 rounded-lg p-2">
-
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
                         <option value="F">Féminin</option>
                         <option value="M">Masculin</option>
-
                     </select>
-
                 </div>
 
                 <!-- Température -->
-                <div class="mb-3">
-
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Température (°C)
                     </label>
@@ -346,14 +74,15 @@
                         type="number"
                         id="temperature"
                         step="0.1"
-                        class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        placeholder="Ex: 38.5">
-
+                        min="35"
+                        max="42"
+                        placeholder="Ex : 38.5"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
                 </div>
 
                 <!-- Tension -->
-                <div class="mb-3">
-
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Tension systolique
                     </label>
@@ -361,14 +90,15 @@
                     <input
                         type="number"
                         id="tension_sys"
-                        class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        placeholder="Ex: 120">
-
+                        min="60"
+                        max="250"
+                        placeholder="Ex : 120"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
                 </div>
 
                 <!-- Symptômes -->
-                <div class="mb-3">
-
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Symptômes
                     </label>
@@ -376,114 +106,389 @@
                     <div class="space-y-2">
 
                         <label class="flex items-center">
-
-                            <input
-                                type="checkbox"
-                                id="toux"
-                                class="rounded text-blue-600 mr-2">
-
-                            <span class="text-gray-700">
-                                Toux
-                            </span>
-
+                            <input type="checkbox" id="toux" class="mr-2">
+                            <span>Toux</span>
                         </label>
 
                         <label class="flex items-center">
-
-                            <input
-                                type="checkbox"
-                                id="fatigue"
-                                class="rounded text-blue-600 mr-2">
-
-                            <span class="text-gray-700">
-                                Fatigue
-                            </span>
-
+                            <input type="checkbox" id="fatigue" class="mr-2">
+                            <span>Fatigue</span>
                         </label>
 
                         <label class="flex items-center">
-
-                            <input
-                                type="checkbox"
-                                id="maux_tete"
-                                class="rounded text-blue-600 mr-2">
-
-                            <span class="text-gray-700">
-                                Maux de tête
-                            </span>
-
+                            <input type="checkbox" id="maux_tete" class="mr-2">
+                            <span>Maux de tête</span>
                         </label>
 
                     </div>
-
                 </div>
 
                 <!-- Région -->
-                <div class="mb-4">
-
+                <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Région
                     </label>
 
                     <select
                         id="region"
-                        class="w-full border border-gray-300 rounded-lg p-2">
-
-                        <option value="Dakar">Dakar</option>
-                        <option value="Thiès">Thiès</option>
-                        <option value="Saint-Louis">Saint-Louis</option>
-                        <option value="Ziguinchor">Ziguinchor</option>
-                        <option value="Tambacounda">Tambacounda</option>
-
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                        <option>Dakar</option>
+                        <option>Thiès</option>
+                        <option>Saint-Louis</option>
+                        <option>Ziguinchor</option>
+                        <option>Tambacounda</option>
+                        <option>Fatick</option>
+                        <option>Louga</option>
+                        <option>Diourbel</option>
                     </select>
-
                 </div>
 
                 <!-- Bouton -->
                 <button
-                    onclick="diagnostiquer()"
-                    class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition duration-200 shadow-md">
-
+                    id="btn-diagnostiquer"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md"
+                >
                     Diagnostiquer
-
                 </button>
 
             </div>
 
-            <!-- Résultat -->
-            <div id="result-section"  class="bg-white p-6 rounded-xl shadow-md">
+            <!-- RESULTAT -->
+            <div
+                id="result-section"
+                class="bg-white rounded-2xl shadow-lg p-6 flex flex-col justify-center items-center text-center"
+            >
+                <div class="text-5xl mb-4">🩺</div>
 
-                <!-- Colonne droite : résultat -->
-    <div id="result-section">
-        <div class="bg-white rounded-xl shadow-md p-6 text-center text-gray-400">
+                <h3 class="text-xl font-semibold text-gray-700">
+                    Aucun diagnostic
+                </h3>
 
-            <p class="text-4xl mb-3">
-                &#129658;
-            </p>
-
-            <p class="font-medium">
-                Remplissez le formulaire
-            </p>
-
-            <p class="text-sm mt-1">
-                puis cliquez sur Diagnostiquer
-            </p>
-
-        </div>
-
-    </div>
-                </div>
+                <p class="text-gray-400 mt-2">
+                    Remplissez le formulaire puis cliquez sur Diagnostiquer
+                </p>
+            </div>
 
         </div>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="text-center text-gray-400 text-sm py-4">
-
-        SenSante v0.3 - ESP / UCAD - L2 GLSI 2026
-
+    <!-- FOOTER -->
+    <footer class="text-center text-gray-500 text-sm py-4">
+        SenSante v1.0 - ESP / UCAD - GLSI
     </footer>
+
+    <!-- JAVASCRIPT -->
+    <script>
+
+        const API_URL = "http://localhost:8500";
+
+        const btn = document.getElementById("btn-diagnostiquer");
+
+        btn.addEventListener("click", diagnostiquer);
+
+        async function diagnostiquer() {
+
+            const age = parseInt(document.getElementById("age").value);
+            const temperature = parseFloat(document.getElementById("temperature").value);
+            const tension_sys = parseInt(document.getElementById("tension_sys").value);
+
+            // VALIDATION
+            if (
+                isNaN(age) ||
+                isNaN(temperature) ||
+                isNaN(tension_sys)
+            ) {
+                afficherErreur("Veuillez remplir correctement tous les champs.");
+                return;
+            }
+
+            if (age < 0 || age > 120) {
+                afficherErreur("Âge invalide.");
+                return;
+            }
+
+            if (temperature < 35 || temperature > 42) {
+                afficherErreur("Température invalide.");
+                return;
+            }
+
+            if (tension_sys < 60 || tension_sys > 250) {
+                afficherErreur("Tension invalide.");
+                return;
+            }
+
+            // OBJET PATIENT
+            const patient = {
+                age,
+                sexe: document.getElementById("sexe").value,
+                temperature,
+                tension_sys,
+                toux: document.getElementById("toux").checked,
+                fatigue: document.getElementById("fatigue").checked,
+                maux_tete: document.getElementById("maux_tete").checked,
+                region: document.getElementById("region").value
+            };
+
+            afficherChargement();
+
+            try {
+
+                const controller = new AbortController();
+
+                const timeout = setTimeout(() => {
+                    controller.abort();
+                }, 10000);
+
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(patient),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+
+                    let message = "Erreur serveur";
+
+                    try {
+                        const err = await response.json();
+
+                        if (err.detail) {
+
+                            if (typeof err.detail === "string") {
+                                message = err.detail;
+                            }
+
+                            else if (Array.isArray(err.detail)) {
+                                message = err.detail
+                                    .map(e => e.msg)
+                                    .join(", ");
+                            }
+                        }
+
+                    } catch (_) {}
+
+                    throw new Error(message);
+                }
+
+                const resultat = await response.json();
+
+                afficherResultat(resultat, patient);
+
+            }
+
+            catch (error) {
+
+                if (error.name === "AbortError") {
+                    afficherErreur("Temps de réponse dépassé.");
+                }
+
+                else {
+                    afficherErreur(error.message);
+                }
+            }
+        }
+
+        // LOADING
+        function afficherChargement() {
+
+            const section = document.getElementById("result-section");
+
+            section.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-14 w-14 border-b-4 border-blue-600 mb-4"></div>
+
+                    <p class="text-gray-600 font-medium">
+                        Analyse en cours...
+                    </p>
+                </div>
+            `;
+        }
+
+        // RESULTAT
+        function afficherResultat(r, patient) {
+
+            const section = document.getElementById("result-section");
+
+            const confianceColor =
+                r.confiance === "haute"
+                    ? "text-green-600"
+                    : r.confiance === "moyenne"
+                    ? "text-yellow-600"
+                    : "text-red-600";
+
+            const icone =
+                r.diagnostic === "sain"
+                    ? "✅"
+                    : "⚠️";
+
+            let progressColor = "bg-green-500";
+
+            if (r.probabilite < 0.4) {
+                progressColor = "bg-red-500";
+            }
+
+            else if (r.probabilite < 0.7) {
+                progressColor = "bg-yellow-500";
+            }
+
+            const pourcentage = (r.probabilite * 100).toFixed(0);
+
+            section.innerHTML = `
+                <div class="w-full">
+
+                    <div class="text-center mb-6">
+
+                        <div class="text-5xl mb-3">
+                            ${icone}
+                        </div>
+
+                        <h3 class="text-2xl font-bold capitalize text-gray-800">
+                            ${r.diagnostic}
+                        </h3>
+
+                        <p class="text-gray-500 mt-2">
+                            ${r.message}
+                        </p>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Probabilité</span>
+
+                            <span class="${confianceColor} font-semibold">
+                                ${pourcentage}%
+                            </span>
+                        </div>
+
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+
+                            <div
+                                class="${progressColor} h-3 rounded-full transition-all duration-700"
+                                style="width:${pourcentage}%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                    <p class="text-sm text-gray-500 mt-2">
+                        Niveau de confiance :
+                        <span class="${confianceColor} font-bold capitalize">
+                            ${r.confiance}
+                        </span>
+                    </p>
+
+                    <div id="explication-zone"></div>
+
+                </div>
+            `;
+
+            demanderExplication(r, patient);
+        }
+
+        // EXPLICATION IA
+        async function demanderExplication(diagnosticData, patient) {
+
+            const explainData = {
+                diagnostic: diagnosticData.diagnostic,
+                probabilite: diagnosticData.probabilite,
+                age: patient.age,
+                sexe: patient.sexe,
+                temperature: patient.temperature,
+                region: patient.region
+            };
+
+            const explDiv = document.getElementById("explication-zone");
+
+            explDiv.innerHTML = `
+                <div class="mt-5 bg-purple-50 border border-purple-200 rounded-xl p-4">
+                    <p class="text-purple-700 font-semibold mb-2">
+                        Explication IA
+                    </p>
+
+                    <p class="text-gray-500 animate-pulse text-sm">
+                        Génération en cours...
+                    </p>
+                </div>
+            `;
+
+            try {
+
+                const response = await fetch(`${API_URL}/explain`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(explainData)
+                });
+
+                if (!response.ok) {
+                    throw new Error();
+                }
+
+                const result = await response.json();
+
+                explDiv.innerHTML = `
+                    <div class="mt-5 bg-purple-50 border border-purple-200 rounded-xl p-4 text-left">
+
+                        <p class="text-purple-700 font-semibold mb-2">
+                            Explication IA
+                        </p>
+
+                        <p class="text-gray-700 leading-relaxed text-sm">
+                            ${result.explication}
+                        </p>
+
+                    </div>
+                `;
+            }
+
+            catch (_) {
+
+                explDiv.innerHTML = `
+                    <div class="mt-5 bg-gray-100 border border-gray-200 rounded-xl p-4">
+                        <p class="text-gray-500 text-sm">
+                            Explication indisponible.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // ERREUR
+        function afficherErreur(message) {
+
+            const section = document.getElementById("result-section");
+
+            section.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-6 w-full">
+
+                    <div class="text-4xl mb-3">
+                        ❌
+                    </div>
+
+                    <p class="text-red-700 font-semibold">
+                        ${message}
+                    </p>
+
+                    <p class="text-red-500 text-sm mt-2">
+                        Vérifiez les données saisies ou le serveur API.
+                    </p>
+
+                </div>
+            `;
+        }
+
+    </script>
 
 </body>
 

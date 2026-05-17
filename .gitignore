@@ -18,3 +18,5 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+.env # Fichier d'environnement contenant des clés API et autres secrets, ne pas versionner
